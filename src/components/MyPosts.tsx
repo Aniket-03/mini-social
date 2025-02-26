@@ -3,7 +3,7 @@ import { fetchMyPosts, deletePost } from "../common/firebaseFunctions";
 import { useAuth } from "../hooks/useAuth";
 import Post from "./Post";
 import Loader from "../common/Loader";
-import { PostModal } from "../common/postModal";
+import { PostModal } from "../common/modal";
 
 const MyPosts = () => {
   const [myPosts, setMyPosts] = useState<PostModal[]>([]);

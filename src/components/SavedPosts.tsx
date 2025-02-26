@@ -3,7 +3,7 @@ import { fetchSavedPosts } from "../common/firebaseFunctions";
 import { useAuth } from "../hooks/useAuth";
 import Post from "./Post";
 import Loader from "../common/Loader";
-import { PostModal } from "../common/postModal";
+import { PostModal } from "../common/modal";
 import { Link } from "react-router-dom";
 
 const SavedPosts = () => {

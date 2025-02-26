@@ -5,7 +5,7 @@ import { auth } from "../firebase-config";
 import Loader from "../common/Loader";
 import CreatePost from "../components/CreatePost";
 import { DocumentData, QueryDocumentSnapshot } from "firebase/firestore";
-import { PostModal } from "../common/postModal";
+import { PostModal } from "../common/modal";
  
 const Content = () => {
   const userId = auth?.currentUser?.uid;

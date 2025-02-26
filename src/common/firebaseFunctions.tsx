@@ -1,16 +1,7 @@
-import { PostModal } from "./postModal";
+import { Comment, PostModal } from "./modal";
 import { collection, addDoc, getDocs, query, orderBy, limit, startAfter, doc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, setDoc, where, deleteDoc, getDoc,} from "firebase/firestore";
 import { db, auth } from "../firebase-config";
 
-interface Comment {
-  id?: string;
-  text: string;
-  userId: string;
-  username?: string;
-  parentId?: string | null;
-  createdAt: any;
-  replies?: Comment[];
-}
 
 export const fetchComments = async (postId: string) => {
   try {

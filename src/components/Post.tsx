@@ -7,17 +7,7 @@ import {
   unsavePost,
 } from "../common/firebaseFunctions";
 import { useAuth } from "../hooks/useAuth";
-import { PostModal } from "../common/postModal";
-
-interface Comment {
-  id?: string;
-  text: string;
-  userId: string;
-  username?: string;
-  parentId?: string | null;
-  createdAt: any;
-  replies?: Comment[];
-}
+import { Comment, PostModal } from "../common/modal";
 
 const CommentComponent: React.FC<{
   comment: Comment;
@@ -37,7 +27,7 @@ const CommentComponent: React.FC<{
   };
 
   return (
-    <div className="ml-4 mt-2 border-l-2 pl-2">
+    <div className="ml-4 mt-2 pl-2">
       <div>
         <p className="font-medium">{comment.username}</p>
         <p>{comment.text}</p>
@@ -62,7 +52,7 @@ const CommentComponent: React.FC<{
             onClick={handleReply}
             className="mt-2 bg-blue-500 text-white px-4 py-2 rounded-lg cursor-pointer"
           >
-            Post Reply
+            Reply
           </button>
         </div>
       )}

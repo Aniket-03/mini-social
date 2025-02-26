@@ -9,13 +9,11 @@ import {
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from "./firebase-config";
 
-// Components and Pages
 import Home from "./pages/Home"; 
 import LoginPage from "./pages/Login"; 
 import RegisterPage from "./pages/Register"; 
 import SavedPosts from "./components/SavedPosts"; 
 import MyPosts from "./components/MyPosts"; 
-// import NotFound from "./components/NotFound";
 import { ToastContainer } from "react-toastify";
 import Navbar from "./components/Navbar";
 
@@ -107,7 +105,6 @@ const App = () => {
             </UnprotectedRoute>             
           }           
         />               
-        {/* <Route path="*" element={<NotFound />} />            */}
       </Routes>     
     </Router>   
   ); 

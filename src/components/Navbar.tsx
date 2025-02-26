@@ -49,14 +49,14 @@ const Navbar = () => {
         <div className="flex ml-auto items-center space-x-2 sm:space-x-4">
           <Link
             to="/login"
-            className="text-sm sm:text-base font-bold text-gray-200 hover:text-blue-500"
+            className="text-sm sm:text-base font-bold text-gray-200 hover:text-gray-500"
           >
             Login
           </Link>
 
           <Link
             to="/register"
-            className="text-sm sm:text-base font-bold text-gray-200 hover:text-green-500"
+            className="text-sm sm:text-base font-bold text-gray-200 hover:text-gray-500"
           >
             Register
           </Link>

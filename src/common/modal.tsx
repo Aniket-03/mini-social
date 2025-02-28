@@ -1,5 +1,5 @@
 export interface PostModal {
-  id: string; 
+    id: string; 
     createdAt?: string;  
     userId?: string; 
     username?: string; 

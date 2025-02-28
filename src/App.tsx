@@ -1,113 +1,73 @@
-import React, { useEffect, useState } from 'react';
-import {   
-  BrowserRouter as Router,   
-  Route,   
-  Routes,   
-  Navigate, 
-  useLocation 
-} from "react-router-dom"; 
-import { onAuthStateChanged } from 'firebase/auth';
+import React, { useEffect, useState } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
+import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./firebase-config";
 
-import Home from "./pages/Home"; 
-import LoginPage from "./pages/Login"; 
-import RegisterPage from "./pages/Register"; 
-import SavedPosts from "./components/SavedPosts"; 
-import MyPosts from "./components/MyPosts"; 
+import Home from "./pages/Home";
+import LoginPage from "./pages/Signin";
+import RegisterPage from "./pages/Signup";
+import SavedPosts from "./components/SavedPosts";
+import MyPosts from "./components/MyPosts";
 import { ToastContainer } from "react-toastify";
 import Navbar from "./components/Navbar";
 
-const UnprotectedRoute = ({ children }: { children: React.ReactNode }) => {   
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+const PublicRoute = ({ children }: { children: React.ReactNode }) => {
+  const [userAuthenticated, setUserAuthenticated] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setIsAuthenticated(!!user);
-      setIsLoading(false);
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      setUserAuthenticated(!!user);
+      setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => unsubscribeAuth();
   }, []);
 
-  if (isLoading) {
-    return <div>Loading...</div>; 
-  }
+  if (loading) return <div>Loading...</div>;
 
-  if (isAuthenticated) {     
-    return <Navigate to="/" replace />;   
-  }    
+  return userAuthenticated ? <Navigate to="/" replace /> : <>{children}</>;
+};
 
-  return <>{children}</>;
-};  
-
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {   
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
+  const [userAuthenticated, setUserAuthenticated] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const location = useLocation();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setIsAuthenticated(!!user);
-      setIsLoading(false);
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      setUserAuthenticated(!!user);
+      setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => unsubscribeAuth();
   }, []);
 
-  if (isLoading) {
-    return <div>Loading...</div>; 
-  }
+  if (loading) return <div>Loading...</div>;
 
-  if (!isAuthenticated) {     
-    return <Navigate to="/login" state={{ from: location }} replace />;   
-  }    
-
-  return <>{children}</>;
-};  
+  return userAuthenticated ? <>{children}</> : <Navigate to="/login" state={{ from: location }} replace />;
+};
 
 const App = () => {
-  return (     
-    <Router>       
-      <ToastContainer />       
-      <Navbar />         
-      <Routes>           
-        <Route path="/" element={<Home />} />            
-        <Route 
-          path="/saved-post"             
-          element={               
-            <ProtectedRoute>                 
-              <SavedPosts />               
-            </ProtectedRoute>             
-          }           
-        />           
-        <Route 
-          path="/my-post"             
-          element={               
-            <ProtectedRoute>                 
-              <MyPosts />               
-            </ProtectedRoute>             
-          }           
-        />            
-        <Route 
-          path="/login"             
-          element={               
-            <UnprotectedRoute>                 
-              <LoginPage />               
-            </UnprotectedRoute>             
-          }           
-        />           
-        <Route 
-          path="/register"             
-          element={               
-            <UnprotectedRoute>                 
-              <RegisterPage />               
-            </UnprotectedRoute>             
-          }           
-        />               
-      </Routes>     
-    </Router>   
-  ); 
-};  
+  return (
+    <Router>
+      <ToastContainer />
+      <Navbar />
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/savePost" element={<PrivateRoute><SavedPosts /></PrivateRoute>} />
+        <Route path="/myPost" element={<PrivateRoute><MyPosts /></PrivateRoute>} />
+        <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+        <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
+      </Routes>
+    </Router>
+  );
+};
 
 export default App;

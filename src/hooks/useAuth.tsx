@@ -14,14 +14,15 @@ export const useAuth = () => {
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser || null);
     });
-    return () => unsubscribe();
+
+    return () => unsubscribeAuth();
   }, []);
 
   const loginWithEmailPassword = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+    return signInWithEmailAndPassword(auth, email, password);
   };
 
   const registerWithEmailPassword = async (
@@ -29,23 +30,15 @@ export const useAuth = () => {
     password: string,
     username: string
   ) => {
-    try {
-      await createUserWithEmailAndPassword(auth, email, password);
-
-      if (auth.currentUser) {
-        await updateProfile(auth.currentUser, { displayName: username });
-      }
-
-      console.log("User registered with displayName:", username);
-    } catch (error) {
-      console.error("Error registering user:", error);
-      throw error;
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    if (userCredential.user) {
+      await updateProfile(userCredential.user, { displayName: username });
     }
   };
 
   const loginWithGoogle = async () => {
-    const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
+    const googleProvider = new GoogleAuthProvider();
+    return signInWithPopup(auth, googleProvider);
   };
 
   const registerWithGoogle = async () => {
@@ -53,7 +46,7 @@ export const useAuth = () => {
   };
 
   const logout = async () => {
-    await signOut(auth);
+    return signOut(auth);
   };
 
   return {

@@ -1,82 +1,83 @@
 import { useState } from "react";
-import { addPostToFirestore } from "../common/firebaseFunctions";
+import { addPostToFirestore } from "../common/shared";
 import { toast } from "react-toastify";
 import Loader from "../common/Loader";
 
 const AddPost = ({ onPostAdded }: { onPostAdded: () => void }) => {
-  const [imageFile, setImageFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files ? e.target.files[0] : null;
-    if (file) {
-      setImageFile(file);
+  let preset = process.env.REACT_APP_UPLOAD_PRESET
+  const uploadImage = async (image: File): Promise<string | null> => {
+    const formData = new FormData();
+    formData.append("file", image);
+    const uploadPreset = process.env.REACT_APP_UPLOAD_PRESET;
+
+    if (!uploadPreset) {
+      throw new Error("Missing REACT_APP_UPLOAD_PRESET in .env file");
+    }
+    
+    formData.append("upload_preset", uploadPreset);
+
+    const cloudinary = process.env.REACT_APP_CLOUDINARY;
+
+    if (!cloudinary) {
+      throw new Error("Missing cloudinary in .env file");
+    }
+    try {
+      const res = await fetch(cloudinary, {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      return data.secure_url || null;
+    } catch (err) {
+      console.error("Error uploading image:", err);
+      return null;
     }
   };
 
-  const handlePostSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!imageFile) {
+    if (!selectedImage) {
       toast.error("Please upload an image.");
       return;
     }
 
     setLoading(true);
     try {
-      const formData = new FormData();
-      formData.append("file", imageFile);
-      formData.append("upload_preset", 'Social');  
+      const imageUrl = await uploadImage(selectedImage);
+      if (!imageUrl) throw new Error("Image upload failed.");
 
-      const response = await fetch('https://api.cloudinary.com/v1_1/dw9mwtcc1/image/upload', {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (data.secure_url) {
-        const imageUrl = data.secure_url;
-        console.log(imageUrl)
-        await addPostToFirestore(imageUrl);
-
-        toast.success("Post added successfully!");
-
-        setImageFile(null);
-        onPostAdded();
-      } else {
-        throw new Error("Image upload failed.");
-      }
+      await addPostToFirestore(imageUrl);
+      toast.success("Post added successfully!");
+      setSelectedImage(null);
+      onPostAdded();
     } catch (err) {
       toast.error("Failed to add post. Please try again.");
       console.error(err);
     }
-
     setLoading(false);
   };
 
   return (
-    <div className="">
- <div className="flex  pt-10 px-6 w-full sm:max-w-xl max-w-xl rounded-lg mb-1 ">
+    <div className="pt-10 px-6 w-fit rounded-lg">
       {loading && <Loader />}
-      <form
-        onSubmit={handlePostSubmit}
-        className=" p-4 w-full"
-      >
-        <div className="w-full relative">
+      <form onSubmit={handleSubmit} className="p-4 w-full">
+        <div className="w-full border rounded-sm p-2 flex flex-col items-center cursor-pointer relative">
           <input
             type="file"
             accept="image/*"
-            onChange={handleFileChange}
+            onChange={(e) => setSelectedImage(e.target.files ? e.target.files[0] : null)}
             className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
           />
-          <button
-            type="button"
-            className="w-full py-2 border rounded-sm text-gray-600 bg-white focus:outline-none hover:bg-gray-100"
-          >
-            {imageFile ? imageFile.name : "Upload Image"}
-          </button>
+          {selectedImage ? (
+            <img src={URL.createObjectURL(selectedImage)} alt="Preview" className="w-16 h-16 object-cover rounded" />
+          ) : (
+            <p className="text-gray-200 cursor-pointer">Click to Upload Image</p>
+          )}
         </div>
-
         <button
           type="submit"
           disabled={loading}
@@ -88,8 +89,6 @@ const AddPost = ({ onPostAdded }: { onPostAdded: () => void }) => {
         </button>
       </form>
     </div>
-    </div>
-    
   );
 };
 

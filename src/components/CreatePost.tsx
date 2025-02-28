@@ -7,7 +7,6 @@ const AddPost = ({ onPostAdded }: { onPostAdded: () => void }) => {
   const [loading, setLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
 
-  let preset = process.env.REACT_APP_UPLOAD_PRESET
   const uploadImage = async (image: File): Promise<string | null> => {
     const formData = new FormData();
     formData.append("file", image);

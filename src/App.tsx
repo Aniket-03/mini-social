@@ -7,7 +7,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "./firebase-config";
+import { auth } from "./firebase";
 
 import Home from "./pages/Home";
 import LoginPage from "./pages/Signin";

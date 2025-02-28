@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
-import { getSavedPost } from "../common/shared";
 import { useAuth } from "../hooks/useAuth";
 import Post from "./Post";
 import Loader from "../common/Loader";
 import { PostModal } from "../common/modal";
-
+import {
+  collection,
+  getDocs,
+  doc,
+  getDoc,
+} from "firebase/firestore";
+import { db } from "../firebase";
 const SavedPosts = () => {
   const { user } = useAuth();
   const [savedPosts, setSavedPosts] = useState<PostModal[]>([]);
@@ -28,6 +33,36 @@ const SavedPosts = () => {
 
     fetchSavedPosts();
   }, [user, refresh]);
+
+  const getSavedPost = async (userId: string) => {
+    try {
+      const savedPostsRef = collection(db, "users", userId, "savedPosts");
+  
+      const querySnapshot = await getDocs(savedPostsRef);
+  
+      const savedPosts = [];
+  
+      for (const savedDoc of querySnapshot.docs) {
+        const { postId } = savedDoc.data();
+  
+        const postRef = doc(db, "posts", postId);
+        const postSnap = await getDoc(postRef);
+  
+        if (postSnap.exists()) {
+          savedPosts.push({
+            id: postId,
+            ...postSnap.data(),
+            isSaved: true,
+          });
+        }
+      }
+  
+      return savedPosts;
+    } catch (error) {
+      console.error("Error fetching saved posts:", error);
+      return [];
+    }
+  };
 
   return (
     <>

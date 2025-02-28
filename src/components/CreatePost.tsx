@@ -1,8 +1,12 @@
 import { useState } from "react";
-import { addPostToFirestore } from "../common/shared";
 import { toast } from "react-toastify";
 import Loader from "../common/Loader";
-
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+} from "firebase/firestore";
+import { db, auth } from "../firebase";
 const AddPost = ({ onPostAdded }: { onPostAdded: () => void }) => {
   const [loading, setLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -58,6 +62,25 @@ const AddPost = ({ onPostAdded }: { onPostAdded: () => void }) => {
       console.error(err);
     }
     setLoading(false);
+  };
+
+  const addPostToFirestore = async (imageFile: string): Promise<string> => {
+    const userId = auth.currentUser?.uid;
+    if (!userId) throw new Error("User not logged in");
+  
+    try {
+      const postRef = await addDoc(collection(db, "posts"), {
+        imageURL: imageFile,
+        username: auth.currentUser?.displayName,
+        likes: [],
+        userId,
+        createdAt: serverTimestamp(),
+      });
+      return postRef.id;
+    } catch (error) {
+      console.error("Error adding post:", error);
+      throw error;
+    }
   };
 
   return (

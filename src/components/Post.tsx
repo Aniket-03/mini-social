@@ -1,14 +1,22 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
-import {
-  toggleLike,
-  addCommentReply,
-  getComments,
-  savePost,
-  unsavePost,
-} from "../common/shared";
 import { Comment, PostModal } from "../common/modal";
-
+import {
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  orderBy,
+  doc,
+  updateDoc,
+  arrayUnion,
+  arrayRemove,
+  serverTimestamp,
+  setDoc,
+  deleteDoc,
+  getDoc,
+} from "firebase/firestore";
+import { db } from "../firebase";
 
 const Post = ({ post, currentUserId, setLoading, updatePost = () => {} }: { post: PostModal; currentUserId: string | null | undefined; setLoading: (loading: boolean) => void; updatePost: () => void; }) => {
   const { user } = useAuth();
@@ -39,11 +47,65 @@ const Post = ({ post, currentUserId, setLoading, updatePost = () => {} }: { post
     }
   };
 
+  const toggleLike = async (postId: string, userId: string): Promise<string[]> => {
+    const postRef = doc(db, "posts", postId);
+    try {
+      const postSnapshot = await getDoc(postRef);
+      const postData = postSnapshot.data();
+      if (!postData) throw new Error("Post not found");
+      const likes: string[] = postData.likes || [];
+      await updateDoc(postRef, { likes: likes.includes(userId) ? arrayRemove(userId) : arrayUnion(userId) });
+      return likes.includes(userId) ? likes.filter((id) => id !== userId) : [...likes, userId];
+    } catch (error) {
+      console.error("Error toggling like:", error);
+      throw error;
+    }
+  };
+
   const toggleComments = async () => {
     if (!currentUserId) return;
     setShowComments((prev) => !prev);
     if (!showComments) {
       setComments(await getComments(post.id));
+    }
+  };
+
+  const getComments = async (postId: string): Promise<Comment[]> => {
+    try {
+      const commentsSnapshot = await getDocs(
+        query(collection(db, "posts", postId, "comments"), orderBy("createdAt", "asc"))
+      );
+  
+      const comments: Comment[] = commentsSnapshot.docs.map((doc) => {
+        const data = doc.data() as Omit<Comment, "id" | "replies">;
+        return { id: doc.id, replies: [], ...data };
+      });
+  
+      const commentMap = new Map<string, Comment>();
+      const rootComments: Comment[] = [];
+  
+      comments.forEach((comment) => {
+        if (comment.id) {
+          commentMap.set(comment.id, comment);
+        }
+      });
+      
+      comments.forEach((comment) => {
+        if (comment.parentId) {
+          const parent = commentMap.get(comment.parentId);
+          if (parent) {
+            parent.replies ??= [];
+            parent.replies.push(comment);
+          }
+        } else {
+          rootComments.push(comment);
+        }
+      });
+  
+      return rootComments;
+    } catch (error) {
+      console.error("Error fetching comments:", error);
+      return [];
     }
   };
 
@@ -61,6 +123,36 @@ const Post = ({ post, currentUserId, setLoading, updatePost = () => {} }: { post
     }
   };
 
+  const unsavePost = async (postId: string, userId: string): Promise<boolean> => {
+    try {
+      const postRef = doc(db, "posts", postId);
+      await updateDoc(postRef, { savedBy: arrayRemove(userId) });
+  
+      const savedPostRef = doc(collection(db, "users", userId, "savedPosts"), postId);
+      await deleteDoc(savedPostRef);
+  
+      return true;
+    } catch (error) {
+      console.error("Error unsaving post:", error);
+      return false;
+    }
+  };
+
+  const savePost = async (postId: string, userId: string): Promise<boolean> => {
+    try {
+      const postRef = doc(db, "posts", postId);
+      await updateDoc(postRef, { savedBy: arrayUnion(userId) });
+  
+      const savedPostRef = doc(collection(db, "users", userId, "savedPosts"), postId);
+      await setDoc(savedPostRef, { postId, savedAt: new Date() }, { merge: true });
+  
+      return true;
+    } catch (error) {
+      console.error("Error saving post:", error);
+      return false;
+    }
+  };
+
   const handleAddComment = async (parentId: string | null = null, commentText = newComment) => {
     if (!user || !commentText.trim()) return;
     setLoading(true);
@@ -72,6 +164,32 @@ const Post = ({ post, currentUserId, setLoading, updatePost = () => {} }: { post
       console.error("Error adding comment:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const addCommentReply = async (
+    postId: string,
+    parentId: string | null,
+    text: string,
+    userId: string,
+    username: string
+  ): Promise<Comment> => {
+    try {
+      const commentData: Omit<Comment, "id"> = {
+        text,
+        userId,
+        username,
+        parentId,
+        createdAt: serverTimestamp(),
+      };
+  
+      const commentCollection = collection(db, "posts", postId, "comments");
+      const commentDoc = await addDoc(commentCollection, commentData);
+  
+      return { id: commentDoc.id, ...commentData };
+    } catch (error) {
+      console.error("Failed to add comment:", error);
+      throw error;
     }
   };
 
@@ -104,7 +222,7 @@ const Post = ({ post, currentUserId, setLoading, updatePost = () => {} }: { post
             ))}
           </div>
           <div className="mt-4 flex space-x-2 mx-2">
-            <input type="text" placeholder="Write a comment..." value={newComment} onChange={(e) => setNewComment(e.target.value)} className="w-full p-2 border rounded-lg" />
+            <input type="text" value={newComment} onChange={(e) => setNewComment(e.target.value)} className="w-full p-2 border rounded-lg" />
             <button onClick={() => handleAddComment()} className="px-4 py-2 text-white font-semibold rounded-sm bg-gray-900">
               Post
             </button>
@@ -139,7 +257,7 @@ const CommentComponent: React.FC<{ comment: Comment; postId: string; onReply: (p
       </div>
       {showReplyInput && (
         <div className="mt-2 mx-4">
-          <input type="text" placeholder="Write a reply..." value={replyText} onChange={(e) => setReplyText(e.target.value)} className="w-full p-2 border rounded-lg" />
+          <input type="text"  value={replyText} onChange={(e) => setReplyText(e.target.value)} className="w-full p-2 border rounded-lg" />
           <button onClick={submitReply} className="mt-2 bg-gray-900 text-white px-4 py-2 rounded-lg cursor-pointer">
             Reply
           </button>

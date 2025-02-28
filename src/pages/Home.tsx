@@ -1,11 +1,18 @@
 import { useState, useEffect, useCallback } from "react";
-import { getPosts } from "../common/shared";
 import PostItem from "../components/Post";
-import { auth } from "../firebase-config";
 import Spinner from "../common/Loader";
 import NewPost from "../components/CreatePost";
 import { DocumentData, QueryDocumentSnapshot } from "firebase/firestore";
 import { PostModal } from "../common/modal";
+import {
+  collection,
+  getDocs,
+  query,
+  orderBy,
+  limit,
+  startAfter,
+} from "firebase/firestore";
+import { db, auth } from "../firebase";
 
 const HomePage = () => {
   const currentUser = auth?.currentUser?.uid;
@@ -13,6 +20,24 @@ const HomePage = () => {
   const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [pageCount, setPageCount] = useState(1);
+
+  
+
+  const getPosts = async (lastVisible: any): Promise<{ posts: PostModal[]; lastVisible: any }> => {
+    const DEFAULT_LIMIT = 2;
+    try {
+      const baseQuery = query(collection(db, "posts"), orderBy("createdAt", "desc"));
+      const paginatedQuery = lastVisible ? query(baseQuery, startAfter(lastVisible), limit(DEFAULT_LIMIT)) : query(baseQuery, limit(DEFAULT_LIMIT));
+      const snapshot = await getDocs(paginatedQuery);
+      return {
+        posts: snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
+        lastVisible: snapshot.docs[snapshot.docs.length - 1] || null,
+      };
+    } catch (error) {
+      console.error("Error fetching posts:", error);
+      return { posts: [], lastVisible: null };
+    }
+  };
 
   const fetchMorePosts = useCallback(
     async (reset = false) => {

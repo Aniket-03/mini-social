@@ -1,10 +1,17 @@
 import { useEffect, useState } from "react";
-import { getMyPost, deletePost } from "../common/shared";
 import { useAuth } from "../hooks/useAuth";
 import Post from "./Post";
 import Loader from "../common/Loader";
 import { PostModal } from "../common/modal";
-
+import {
+  collection,
+  getDocs,
+  query,
+  doc,
+  where,
+  deleteDoc,
+} from "firebase/firestore";
+import { db, auth } from "../firebase";
 const MyPosts = () => {
   const [posts, setPosts] = useState<PostModal[]>([]);
   const [loading, setLoading] = useState(false);
@@ -28,6 +35,18 @@ const MyPosts = () => {
     fetchPosts();
   }, [user]);
 
+  const getMyPost = async (userId: string): Promise<PostModal[]> => {
+    try {
+      const postsRef = collection(db, "posts");
+      const userPostsQuery = query(postsRef, where("userId", "==", userId));
+      const querySnapshot = await getDocs(userPostsQuery);
+      return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+      console.error("Error fetching user's posts:", error);
+      return [];
+    }
+  };
+
   const removePost = async (id: string) => {
     setLoading(true);
     try {
@@ -37,6 +56,16 @@ const MyPosts = () => {
       console.error("Error deleting post:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const deletePost = async (postId: string) => {
+    try {
+      const postRef = doc(db, "posts", postId);
+      await deleteDoc(postRef);
+      console.log("Post deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting post:", error);
     }
   };
 
